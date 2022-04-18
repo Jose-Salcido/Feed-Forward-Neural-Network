@@ -1,34 +1,19 @@
 
-# Utilize PEP-8 package import coding standard
-
-# Standard Library Packages First
-# import ast
 from datetime import datetime
 import logging
 import os
 from pathlib import Path
-import platform
-
-# 3rd Party Packages Second
-import configargparse
-
-import joblib
-# from keras import optimizers
-from keras.models import Model
-from keras.layers import Input, Dense
-import numpy as np
-import pandas as pd
-
-from sklearn.model_selection import train_test_split
-# from keras import metrics
-from sklearn import preprocessing
-from sklearn.preprocessing import StandardScaler
-import tensorflow as tf
-from tensorflow import keras
-# from keras.utils.vis_utils import plot_model
+import sys
 import textwrap
 
-# Local Packages Third
+import configargparse
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+import tensorflow as tf
+
 from utils import plot_functions
 
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Ignore Tensorflow warning messages from out depricated libraries. Only allow error warnings
@@ -285,8 +270,9 @@ def generate_plots(
     plots.CorrHeatMap()
     logger.info("Correlation HeatMap Plot Generated")
 
-    plots.LossPlot()
+    loss = plots.LossPlot()
     logger.info("Loss Plot Generated")
+    logger.info(f"Training Data Loss (Obj Function): {loss}")
 
     plots.MSEPlot()
     logger.info("MSE Plot Generated")
@@ -394,7 +380,7 @@ def train_neural_network(
     Scaled_y_test = np.array
 
     if user_defined_scaler == "StandardScaler":
-        scaler = StandardScaler()
+        scaler = preprocessing.StandardScaler()
         print("Using StandardScaler")
         StandardScaler_filename = "StandardScaler.save"
         output_scaler_path = output_directory / Path(StandardScaler_filename)
@@ -434,21 +420,21 @@ def train_neural_network(
     '''
     user_defined_activation_function = ActivationFunction(activation_function)
 
-    Input_1 = Input(shape=(n_cols,))
-    layer = Dense(nodes, activation = user_defined_activation_function)(Input_1)
+    Input_1 = tf.keras.Input(shape=(n_cols,))
+    layer = tf.keras.layers.Dense(nodes, activation = user_defined_activation_function)(Input_1)
     # Construct hidden layers
     # TODO: Look into using enumerate
     for i in range(layers - 1):
-        layer = Dense(nodes, activation = user_defined_activation_function)(layer)
+        layer = tf.keras.layers.Dense(nodes, activation = user_defined_activation_function)(layer)
     # Narrowing down number of nodes by half steps seems to improve training and predictions
-    layer = Dense(int(nodes / 2), activation = user_defined_activation_function)(layer)
-    layer = Dense(int(nodes / 4), activation = user_defined_activation_function)(layer)
-    layer = Dense(int(nodes / 8), activation = user_defined_activation_function)(layer)
-    layer = Dense(int(nodes / 16), activation = user_defined_activation_function)(layer)
-    output_1 = Dense(1, activation = user_defined_activation_function)(layer)
+    layer = tf.keras.layers.Dense(int(nodes / 2), activation = user_defined_activation_function)(layer)
+    layer = tf.keras.layers.Dense(int(nodes / 4), activation = user_defined_activation_function)(layer)
+    layer = tf.keras.layers.Dense(int(nodes / 8), activation = user_defined_activation_function)(layer)
+    layer = tf.keras.layers.Dense(int(nodes / 16), activation = user_defined_activation_function)(layer)
+    output_1 = tf.keras.layers.Dense(1, activation = user_defined_activation_function)(layer)
 
     # Create the model composed of the defined layers and nodes
-    model = Model(inputs=Input_1, outputs=output_1)
+    model = tf.keras.Model(inputs=Input_1, outputs=output_1)
 
     '''DEFINE OPTIMIZER, LEARNING RATE, AND LOSS FUNCTIONS'''
 
@@ -468,10 +454,10 @@ def train_neural_network(
         Here we are setting optimizer to the equivalent of keras.optimizers.opt(learning_rate = some_value)
         Due to the user optimization function being a string from a dictionary key, we use getattr to do the equivalent call
         '''
-        optimizer = getattr(keras.optimizers, str(user_defined_optimization_function))(dict_learning_rate)
+        optimizer = getattr(tf.keras.optimizers, str(user_defined_optimization_function))(dict_learning_rate)
     else:
         logger.info(f"Learning rate provided is: {learning_rate}")
-        optimizer = getattr(keras.optimizers, str(user_defined_optimization_function))(learning_rate)
+        optimizer = getattr(tf.keras.optimizers, str(user_defined_optimization_function))(learning_rate)
 
     '''LOSS FUNCTION
     Capture user defined loss function if different from default MSE
@@ -552,7 +538,7 @@ if __name__ == '__main__':
     logger.addHandler(fh)
     logger.info("\n=========== DEEP FEED FORWARD NEURAL NETWORK LOG ===========\n")
 
-    logger.info("Built with {platform.sys.version}")
+    logger.info(f"Using Python {sys.version}")
     logger.info('Machine Learning Packages: Keras, SciKit-Learn, Tensorflow (backend GPU processing)')
     logger.info('Python libraries: Numpy, SciPy, Pandas, Matploblib, Seaborn\n')
 
